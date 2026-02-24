@@ -4,7 +4,7 @@ from netmiko import ConnectHandler
 switch_ips = [
     "192.168.12.140",
     "192.168.12.141",
-    "192.168.12.142"
+    "192.168.12.143"
 ]
 
 # VLAN Details
@@ -20,6 +20,7 @@ for ip in switch_ips:
         "username": "admin",
         "password": "cisco123",
         "secret": "cisco123",
+        "global_delay_factor": 2   # IMPORTANT for IOU/EVE-NG
     }
 
     try:
@@ -29,11 +30,19 @@ for ip in switch_ips:
         # Enter enable mode
         connection.enable()
 
+        # Force prompt detection (IMPORTANT FIX)
+        prompt = connection.find_prompt()
+        print(f"Connected. Prompt: {prompt}")
+
         # VLAN configuration commands
         vlan_commands = [
             f"vlan {vlan_id}",
             f"name {vlan_name}",
-            "exit"
+            "exit",
+            "interface e3/3",
+            "switchport mode access",
+            f"switchport access vlan {vlan_id}",
+            "no shutdown"
         ]
 
         # Send configuration
@@ -41,28 +50,14 @@ for ip in switch_ips:
         print("\nConfiguration Output:\n")
         print(output)
 
-        # Save configuration
-        save_output = connection.send_command("write memory")
+        # Save configuration (USE send_command_timing)
+        print("\nSaving configuration...")
+        save_output = connection.send_command_timing("write memory")
         print(save_output)
 
-        # Verify VLAN
-        verify_output = connection.send_command("show vlan brief")
-        print("\nVLAN Verification:\n")
-        print(verify_output)
-
-        # Close connection
-        connection.disconnect()
-
-        print(f"✅ VLAN {vlan_id} configured successfully on {ip}")
-
-    except Exception as e:
-        print(f"❌ Error on {ip}: {e}")
-vlan_commands = [
-    f"vlan {vlan_id}",
-    f"name {vlan_name}",
-    "exit",
-    "interface e0/1",
-    "switchport mode access",
-    f"switchport access vlan {vlan_id}",
-    "no shutdown"
-]
+        # Verify VLAN (USE expect_string)
+        verify_output = connection.send_command(
+            "show vlan brief",
+            expect_string="#",
+            read_timeout=30
+        )
