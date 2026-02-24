@@ -57,3 +57,12 @@ for ip in switch_ips:
 
     except Exception as e:
         print(f"❌ Error on {ip}: {e}")
+vlan_commands = [
+    f"vlan {vlan_id}",
+    f"name {vlan_name}",
+    "exit",
+    "interface e0/1",
+    "switchport mode access",
+    f"switchport access vlan {vlan_id}",
+    "no shutdown"
+]
