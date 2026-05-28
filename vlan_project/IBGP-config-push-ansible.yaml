@@ -1,0 +1,44 @@
+---
+- name: Configure Interfaces, OSPF and iBGP
+  hosts: routers
+  gather_facts: no
+
+  tasks:
+
+    - name: Configure Loopback
+      cisco.ios.ios_config:
+        lines:
+          - ip address {{ loopback }} 255.255.255.255
+        parents: interface Loopback0
+    
+
+    - name: Configure P2P Interface
+      cisco.ios.ios_config:
+        lines:
+          - ip address {{ p2p_ip }} 255.255.255.0
+          - no shutdown
+        parents: interface {{ p2p_interface }}
+
+    - name: Configure OSPF
+      cisco.ios.ios_config:
+        lines:
+          - router-id {{ loopback }}
+          - network {{ loopback }} 0.0.0.0 area 0
+          - network 192.168.0.0 0.0.255.255 area 0
+        parents: router ospf 1
+
+    - name: Configure iBGP full mesh
+      cisco.ios.ios_config:
+        lines:
+          - neighbor {{ hostvars[item].loopback }} remote-as 500
+          - neighbor {{ hostvars[item].loopback }} update-source Loopback0
+        parents: router bgp 500
+      loop: "{{ groups['routers'] }}"
+      loop_control:
+        loop_var: item
+      when: hostvars[item].loopback != loopback
+   
+    - name: Verify BGP
+      cisco.ios.ios_command:
+        commands:
+          - show ip bgp summary

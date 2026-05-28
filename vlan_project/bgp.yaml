@@ -1,0 +1,29 @@
+---
+- name: Configure BGP on Cisco Router
+  hosts: routers
+  gather_facts: no
+
+  tasks:
+
+  - name: Configure BGP Neighbor
+    cisco.ios.ios_config:
+      lines:
+        - neighbor 192.168.12.131 remote-as 200
+        - neighbor 192.168.12.131 description ISP-PEER
+        - network 10.10.10.0 mask 255.255.255.0
+      parents: router bgp 100
+
+  - name: Save Configuration
+    cisco.ios.ios_command:
+      commands:
+        - write memory
+
+  - name: Verify BGP Summary
+    cisco.ios.ios_command:
+      commands:
+        - show ip bgp summary
+    register: bgp_output
+
+  - name: Display BGP Output
+    debug:
+      var: bgp_output.stdout_lines
