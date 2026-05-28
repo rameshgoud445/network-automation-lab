@@ -1,10 +1,11 @@
 from netmiko import ConnectHandler
+from netmiko.exceptions import NetmikoTimeoutException, NetmikoAuthenticationException
 
 # List of switch IPs
 switch_ips = [
     "192.168.12.140",
     "192.168.12.141",
-    "192.168.12.143"
+    "192.168.12.142"
 ]
 
 # VLAN Details
@@ -20,44 +21,54 @@ for ip in switch_ips:
         "username": "admin",
         "password": "cisco123",
         "secret": "cisco123",
-        "global_delay_factor": 2   # IMPORTANT for IOU/EVE-NG
+        "global_delay_factor": 2,
+        "fast_cli": False   # Important for EVE-NG stability
     }
 
     try:
-        # Establish SSH connection
         connection = ConnectHandler(**switch)
 
         # Enter enable mode
         connection.enable()
 
-        # Force prompt detection (IMPORTANT FIX)
-        prompt = connection.find_prompt()
-        print(f"Connected. Prompt: {prompt}")
+        print("✅ Connected Successfully")
 
-        # VLAN configuration commands
+        # VLAN configuration
         vlan_commands = [
             f"vlan {vlan_id}",
             f"name {vlan_name}",
             "exit",
-            "interface e3/3",
+            "interface Ethernet3/3",   # FIXED INTERFACE NAME
             "switchport mode access",
             f"switchport access vlan {vlan_id}",
-            "no shutdown"
+            "no shutdown",
+            "end"
         ]
 
         # Send configuration
         output = connection.send_config_set(vlan_commands)
-        print("\nConfiguration Output:\n")
+        print("\n📌 Configuration Output:\n")
         print(output)
 
-        # Save configuration (USE send_command_timing)
-        print("\nSaving configuration...")
-        save_output = connection.send_command_timing("write memory")
+        # Save config
+        print("\n💾 Saving configuration...")
+        save_output = connection.save_config()
         print(save_output)
 
-        # Verify VLAN (USE expect_string)
-        verify_output = connection.send_command(
-            "show vlan brief",
-            expect_string="#",
-            read_timeout=30
-        )
+        # Verify VLAN
+        print("\n🔍 Verifying VLAN...")
+        verify_output = connection.send_command("show vlan brief")
+        print(verify_output)
+
+        # Disconnect
+        connection.disconnect()
+        print(f"🔌 Disconnected from {ip}")
+
+    except NetmikoTimeoutException:
+        print(f"❌ Timeout while connecting to {ip}")
+
+    except NetmikoAuthenticationException:
+        print(f"❌ Authentication failed for {ip}")
+
+    except Exception as e:
+        print(f"❌ Error on {ip}: {str(e)}")
