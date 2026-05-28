@@ -1,0 +1,27 @@
+---
+- name: Create VLAN on Cisco Switch
+  hosts: switches
+  gather_facts: no
+
+  tasks:
+
+  - name: Configure VLAN 50
+    cisco.ios.ios_config:
+      lines:
+        - name TECH-Team
+      parents: vlan 50
+
+  - name: Save configuration
+    cisco.ios.ios_command:
+      commands:
+        - write memory
+
+  - name: Verify VLAN
+    cisco.ios.ios_command:
+      commands:
+        - show vlan brief
+    register: vlan_output
+
+  - name: Display VLAN output
+    debug:
+      var: vlan_output.stdout_lines
