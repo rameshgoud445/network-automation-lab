@@ -9,8 +9,11 @@ switch_ips = [
 ]
 
 # VLAN Details
-vlan_id = 10
-vlan_name = "USERS"
+vlan_1_id = 10
+vlan_1_name = "USERS"
+
+vlan_2_id = 20
+vlan_2_name = "SERVERS"
 
 for ip in switch_ips:
     print(f"\n🔧 Connecting to Switch {ip}")
@@ -30,17 +33,31 @@ for ip in switch_ips:
 
         # Enter enable mode
         connection.enable()
-
         print("✅ Connected Successfully")
 
         # VLAN configuration
         vlan_commands = [
-            f"vlan {vlan_id}",
-            f"name {vlan_name}",
+            # VLAN 10
+            f"vlan {vlan_1_id}",
+            f"name {vlan_1_name}",
             "exit",
-            "interface Ethernet3/3",   # FIXED INTERFACE NAME
+
+            # VLAN 20
+            f"vlan {vlan_2_id}",
+            f"name {vlan_2_name}",
+            "exit",
+
+            # Assign VLAN 10
+            "interface Ethernet3/3",
             "switchport mode access",
-            f"switchport access vlan {vlan_id}",
+            f"switchport access vlan {vlan_1_id}",
+            "no shutdown",
+            "exit",
+
+            # Assign VLAN 20
+            "interface Ethernet3/4",
+            "switchport mode access",
+            f"switchport access vlan {vlan_2_id}",
             "no shutdown",
             "end"
         ]
